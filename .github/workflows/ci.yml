@@ -1,0 +1,61 @@
+name: CI Pipeline
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      # Backend
+      - name: Install backend deps
+        run: |
+          cd backend
+          npm install
+
+      - name: Run backend tests
+        run: |
+          cd backend
+          npm test
+
+      - name: Lint backend
+        run: |
+          cd backend
+          npx eslint .
+
+      # Frontend
+      - name: Install frontend deps
+        run: |
+          cd frontend
+          npm install
+
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm run build
+
+      # Run backend in background
+      - name: Start backend
+        run: |
+          cd backend
+          node index.js &
+      
+      # Run frontend in background
+      - name: Start frontend
+        run: |
+          cd frontend
+          npm run dev &
+
+      # Cypress Test
+      - name: Run E2E tests
+        run: |
+          cd frontend
+          npx cypress run
