@@ -11,10 +11,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # ---------------- Setup ----------------
+      # ---------------- Checkout ----------------
       - name: Checkout code
         uses: actions/checkout@v3
 
+      # ---------------- Setup Node ----------------
       - name: Setup Node
         uses: actions/setup-node@v3
         with:
@@ -47,20 +48,23 @@ jobs:
           cd frontend
           npm run build
 
-      # ---------------- Start Services ----------------
+      # ---------------- Start Backend ----------------
       - name: Start backend server
         run: |
           cd backend
           node index.js &
 
+      # ---------------- Start Frontend (Production Mode) ----------------
       - name: Start frontend server
         run: |
           cd frontend
-          npm run dev &
+          npm run preview -- --port 5173 &
 
-      # ---------------- Wait (IMPORTANT) ----------------
-      - name: Wait for servers to start
-        run: sleep 10
+      # ---------------- Wait for Services ----------------
+      - name: Wait for servers to be ready
+        run: |
+          npx wait-on http://localhost:5173
+          npx wait-on http://localhost:5000
 
       # ---------------- E2E Testing ----------------
       - name: Run Cypress E2E tests
