@@ -1,0 +1,35 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy using SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            # Ensure the project directory exists
+            mkdir -p Devops-Project
+            cd Devops-Project
+            
+            # Pull updates or clone
+            git pull origin main || git clone https://github.com/${{ github.repository }}.git .
+            
+            # Install backend dependencies and restart PM2
+            cd backend
+            npm install
+            pm2 restart app || pm2 start src/index.js --name app
+            
+            # Install and build frontend
+            cd ../frontend
+            npm install
+            npm run build

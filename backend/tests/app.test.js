@@ -1,14 +1,18 @@
-const request = require("supertest");
-const app = require("../index");
+const request = require('supertest');
+const app = require('../src/app');
 
-test("GET / should return API running", async () => {
-    const res = await request(app).get("/");
-    expect(res.statusCode).toBe(200);
-    expect(res.body.message).toBe("API running");
-});
+describe('GET /api/health', () => {
+    it('should return 200 and status ok', async () => {
+        const res = await request(app).get('/api/health');
+        expect(res.statusCode).toEqual(200);
+        expect(res.body).toHaveProperty('status', 'ok');
+    });
 
-test("GET /api/data should return data", async () => {
-    const res = await request(app).get("/api/data");
-    expect(res.statusCode).toBe(200);
-    expect(res.body.data).toBe("Hello from backend");
+    it('should pass if node version is not 18 (demo failure)', () => {
+        const version = process.version;
+        // Fails on Node 18 to demonstrate matrix failure
+        if (version.startsWith('v18')) {
+            throw new Error('This test is designed to fail on Node 18 for demo purposes');
+        }
+    });
 });
