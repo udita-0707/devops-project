@@ -1,7 +1,11 @@
 # ============================================================
-# GitHub Actions — Terraform Deployment Pipeline
-# AWS Academy Compatible (No ECR push, No IAM creation)
-# Uses existing LabRole + Terraform-managed infrastructure
+# GitHub Actions — Full CI/CD Pipeline
+# Builds Docker image → Pushes to ECR → Deploys via Terraform
+# AWS Academy Compatible (restricted LabRole)
+#
+# NOTE:
+# Some steps are commented (NOT removed) because AWS Academy policy
+# explicitly denies ECR auth and resource creation during apply.
 # ============================================================
 
 name: Deploy to AWS ECS
@@ -16,42 +20,92 @@ env:
 
 jobs:
   deploy:
-    name: Terraform Deploy
+    name: Build & Deploy
     runs-on: ubuntu-latest
 
     steps:
-      # ── Step 1: Checkout Repository ───────────────────────
+      # ── Step 1: Checkout code ──────────────────────────────
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # ── Step 2: Configure AWS Credentials ────────────────
+      # ── Step 2: Configure AWS credentials ──────────────────
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-session-token:     ${{ secrets.AWS_SESSION_TOKEN }}
-          aws-region: us-east-1
+          aws-region:            us-east-1
 
-      # ── Step 3: Setup Terraform ──────────────────────────
+
+      # ── Step 4: Login to Amazon ECR ───────────────────────
+      # COMMENTED: Fails due explicit deny on ecr:GetAuthorizationToken
+      #
+      # - name: Login to Amazon ECR
+      #   id: login-ecr
+      #   uses: aws-actions/amazon-ecr-login@v2
+
+
+      # ── Step 6: Build, Tag & Push Docker Image ─────────────
+      # COMMENTED: Depends on ECR login, blocked in AWS Academy
+      #
+      # - name: Build and Push Backend Image
+      #   id: build-backend
+      #   env:
+      #     ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+      #     IMAGE_TAG:    ${{ github.sha }}
+      #   run: |
+      #     IMAGE_URI=$ECR_REGISTRY/devops-backend:$IMAGE_TAG
+      #     LATEST_URI=$ECR_REGISTRY/devops-backend:latest
+      #
+      #     echo "Building Docker image..."
+      #     docker build -t $IMAGE_URI -t $LATEST_URI ./backend
+      #
+      #     echo "Pushing image to ECR..."
+      #     docker push $IMAGE_URI
+      #     docker push $LATEST_URI
+      #
+      #     echo "✅ Docker image pushed: $IMAGE_URI"
+
+
+      # - name: Build and Push Frontend Image
+      #   id: build-frontend
+      #   env:
+      #     ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+      #     IMAGE_TAG:    ${{ github.sha }}
+      #   run: |
+      #     IMAGE_URI=$ECR_REGISTRY/devops-frontend:$IMAGE_TAG
+      #     LATEST_URI=$ECR_REGISTRY/devops-frontend:latest
+      #
+      #     echo "Building Docker image..."
+      #     docker build -t $IMAGE_URI -t $LATEST_URI ./frontend
+      #
+      #     echo "Pushing image to ECR..."
+      #     docker push $IMAGE_URI
+      #     docker push $LATEST_URI
+      #
+      #     echo "✅ Docker image pushed: $IMAGE_URI"
+
+
+      # ── Step 7: Setup Terraform ───────────────────────────
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: ${{ env.TF_VERSION }}
 
-      # ── Step 4: Terraform Version Check ──────────────────
+      # ── Step 8: Terraform Version Check ──────────────────
       - name: Terraform Version Check
         working-directory: terraform
         run: terraform version
 
-      # ── Step 5: Terraform Format Check ───────────────────
+      # ── Step 9: Terraform Fmt Check ───────────────────────
       - name: Terraform Fmt Check
         working-directory: terraform
         run: |
           terraform fmt -check -recursive
           echo "✅ Terraform formatting is valid"
 
-      # ── Step 6: Terraform Init ───────────────────────────
+      # ── Step 10: Terraform Init ───────────────────────────
       - name: Terraform Init
         working-directory: terraform
         run: |
@@ -59,36 +113,53 @@ jobs:
           (rm -rf .terraform .terraform.lock.hcl && terraform init -upgrade -input=false)
           echo "✅ Terraform initialized"
 
-      # ── Step 7: Terraform Validate ───────────────────────
+      # ── Step 11: Terraform Import Existing ECR ────────────
+      # COMMENTED: Fails because ECR repository access is denied
+      #
+      # - name: Terraform Import Existing ECR
+      #   working-directory: terraform
+      #   run: |
+      #     terraform import aws_ecr_repository.backend_repo devops-backend || true
+      #     terraform import aws_ecr_repository.frontend_repo devops-frontend || true
+      #     echo "✅ Existing ECR repository imported if present"
+
+
+      # ── Step 12: Terraform Validate ───────────────────────
       - name: Terraform Validate
         working-directory: terraform
         run: |
           terraform validate
           echo "✅ Terraform configuration is valid"
 
-      # ── Step 8: Terraform Plan ───────────────────────────
+      # ── Step 13: Terraform Plan ───────────────────────────
       - name: Terraform Plan
         working-directory: terraform
         run: |
           terraform plan -input=false -out=tfplan
           echo "✅ Terraform plan complete"
 
-      # ── Step 9: Terraform Apply ──────────────────────────
-      - name: Terraform Apply
-        working-directory: terraform
-        run: |
-          terraform apply -input=false -auto-approve tfplan
-          echo "✅ Infrastructure provisioned successfully"
 
-      # ── Step 10: Deployment Summary ──────────────────────
+      # ── Step 14: Terraform Apply ──────────────────────────
+      # COMMENTED: Fails due explicit denies on CreateBucket,
+      # CreateRepository, CreateCluster, CreateSecurityGroup, etc.
+      #
+      # - name: Terraform Apply
+      #   working-directory: terraform
+      #   run: |
+      #     terraform apply -input=false -auto-approve tfplan
+      #     echo "✅ Infrastructure provisioned successfully"
+
+
+      # ── Step 15: Print Deployment Summary ─────────────────
       - name: Deployment Summary
         run: |
           echo "============================================"
-          echo "  ✅ DEPLOYMENT COMPLETE"
+          echo "  ✅ VALIDATION COMPLETE"
           echo "============================================"
-          echo "  Region : us-east-1"
-          echo "  Cluster: devops-cluster"
-          echo "  Commit : ${{ github.sha }}"
+          echo "  Region    : us-east-1"
+          echo "  Cluster   : devops-cluster"
+          echo "  Commit    : ${{ github.sha }}"
+          echo "  Status    : Terraform plan completed"
           echo "============================================"
           echo ""
-          echo "👉 Check AWS Console → ECS → Clusters → devops-cluster"
+          echo "👉 AWS Academy restrictions prevent Apply in CI"
