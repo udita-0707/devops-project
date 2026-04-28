@@ -78,3 +78,10 @@ temp/
 *.tgz
 *.zip
 *.tar.gz
+
+# ------------------------------
+# Terraform
+# ------------------------------
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.backup
