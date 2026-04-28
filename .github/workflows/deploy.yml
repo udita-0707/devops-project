@@ -1,7 +1,7 @@
 # ============================================================
-# GitHub Actions — Full CI/CD Pipeline
-# Builds Docker image → Pushes to ECR → Deploys via Terraform
-# AWS Academy Compatible (uses session token)
+# GitHub Actions — Terraform Deployment Pipeline
+# AWS Academy Compatible (No ECR push, No IAM creation)
+# Uses existing LabRole + Terraform-managed infrastructure
 # ============================================================
 
 name: Deploy to AWS ECS
@@ -9,138 +9,86 @@ name: Deploy to AWS ECS
 on:
   push:
     branches:
-      - main   # Triggers on every push to main branch
+      - main
 
 env:
   TF_VERSION: 1.14.8
 
 jobs:
   deploy:
-    name: Build & Deploy
+    name: Terraform Deploy
     runs-on: ubuntu-latest
 
     steps:
-      # ── Step 1: Checkout code ──────────────────────────────
+      # ── Step 1: Checkout Repository ───────────────────────
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # ── Step 2: Configure AWS credentials (Academy = 3 keys) ──
+      # ── Step 2: Configure AWS Credentials ────────────────
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-session-token:     ${{ secrets.AWS_SESSION_TOKEN }}
-          aws-region:            us-east-1
+          aws-region: us-east-1
 
-      # ── Step 4: Login to Amazon ECR ───────────────────────
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
-
-      # ── Step 6: Build, Tag & Push Docker Image ─────────────
-      - name: Build and Push Backend Image
-        id: build-backend
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          IMAGE_TAG:    ${{ github.sha }}
-        run: |
-          IMAGE_URI=$ECR_REGISTRY/devops-backend:$IMAGE_TAG
-          LATEST_URI=$ECR_REGISTRY/devops-backend:latest
-
-          echo "Building Docker image..."
-          docker build -t $IMAGE_URI -t $LATEST_URI ./backend
-
-          echo "Pushing image to ECR..."
-          docker push $IMAGE_URI
-          docker push $LATEST_URI
-
-          echo "✅ Docker image pushed: $IMAGE_URI"
-
-      - name: Build and Push Frontend Image
-        id: build-frontend
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          IMAGE_TAG:    ${{ github.sha }}
-        run: |
-          IMAGE_URI=$ECR_REGISTRY/devops-frontend:$IMAGE_TAG
-          LATEST_URI=$ECR_REGISTRY/devops-frontend:latest
-
-          echo "Building Docker image..."
-          docker build -t $IMAGE_URI -t $LATEST_URI ./frontend
-
-          echo "Pushing image to ECR..."
-          docker push $IMAGE_URI
-          docker push $LATEST_URI
-
-          echo "✅ Docker image pushed: $IMAGE_URI"
-
-      # ── Step 7: Setup Terraform ───────────────────────────
+      # ── Step 3: Setup Terraform ──────────────────────────
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: ${{ env.TF_VERSION }}
 
-      # ── Step 8: Terraform Version Check ──────────────────
+      # ── Step 4: Terraform Version Check ──────────────────
       - name: Terraform Version Check
         working-directory: terraform
         run: terraform version
 
-      # ── Step 9: Terraform Fmt Check ───────────────────────
+      # ── Step 5: Terraform Format Check ───────────────────
       - name: Terraform Fmt Check
         working-directory: terraform
         run: |
           terraform fmt -check -recursive
           echo "✅ Terraform formatting is valid"
 
-      # ── Step 10: Terraform Init ───────────────────────────
+      # ── Step 6: Terraform Init ───────────────────────────
       - name: Terraform Init
         working-directory: terraform
         run: |
-          terraform init -upgrade -input=false || (rm -rf .terraform .terraform.lock.hcl && terraform init -upgrade -input=false)
+          terraform init -upgrade -input=false || \
+          (rm -rf .terraform .terraform.lock.hcl && terraform init -upgrade -input=false)
           echo "✅ Terraform initialized"
 
-      # ── Step 11: Terraform Import Existing ECR ────────────
-      - name: Terraform Import Existing ECR
-        working-directory: terraform
-        run: |
-          terraform import aws_ecr_repository.backend_repo devops-backend || true
-          terraform import aws_ecr_repository.frontend_repo devops-frontend || true
-          echo "✅ Existing ECR repository imported if present"
-
-      # ── Step 12: Terraform Validate ───────────────────────
+      # ── Step 7: Terraform Validate ───────────────────────
       - name: Terraform Validate
         working-directory: terraform
         run: |
           terraform validate
           echo "✅ Terraform configuration is valid"
 
-      # ── Step 13: Terraform Plan ───────────────────────────
+      # ── Step 8: Terraform Plan ───────────────────────────
       - name: Terraform Plan
         working-directory: terraform
         run: |
           terraform plan -input=false -out=tfplan
           echo "✅ Terraform plan complete"
 
-      # ── Step 14: Terraform Apply ──────────────────────────
+      # ── Step 9: Terraform Apply ──────────────────────────
       - name: Terraform Apply
         working-directory: terraform
         run: |
           terraform apply -input=false -auto-approve tfplan
           echo "✅ Infrastructure provisioned successfully"
 
-      # ── Step 15: Print Deployment Summary ─────────────────
+      # ── Step 10: Deployment Summary ──────────────────────
       - name: Deployment Summary
         run: |
           echo "============================================"
           echo "  ✅ DEPLOYMENT COMPLETE"
           echo "============================================"
-          echo "  Region    : us-east-1"
-          echo "Backend Repo : devops-backend"
-          echo "Frontend Repo: devops-frontend"
-          echo "  Commit    : ${{ github.sha }}"
+          echo "  Region : us-east-1"
+          echo "  Cluster: devops-cluster"
+          echo "  Commit : ${{ github.sha }}"
           echo "============================================"
           echo ""
-          echo "👉 Go to AWS Console → ECS → Clusters"
-          echo "   → devops-cluster → Tasks"
-          echo "   → Copy Public IP → Open in browser :80"
+          echo "👉 Check AWS Console → ECS → Clusters → devops-cluster"
