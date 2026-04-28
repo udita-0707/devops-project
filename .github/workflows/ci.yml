@@ -20,12 +20,13 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 20
+          cache: npm
 
       # ---------------- Backend ----------------
       - name: Install backend dependencies
         run: |
           cd backend
-          npm install
+          npm ci
 
       - name: Run backend tests
         run: |
@@ -35,13 +36,13 @@ jobs:
       - name: Lint backend
         run: |
           cd backend
-          npx eslint .
+          npm run lint
 
       # ---------------- Frontend ----------------
       - name: Install frontend dependencies
         run: |
           cd frontend
-          npm install
+          npm ci
 
       - name: Build frontend
         run: |
@@ -52,7 +53,7 @@ jobs:
       - name: Start backend server
         run: |
           cd backend
-          node index.js &
+          npm start &
 
       # ---------------- Start Frontend (Production Mode) ----------------
       - name: Start frontend server
@@ -64,7 +65,7 @@ jobs:
       - name: Wait for servers to be ready
         run: |
           npx wait-on http://localhost:5173
-          npx wait-on http://localhost:5000
+          npx wait-on http://localhost:3000
 
       # ---------------- E2E Testing ----------------
       - name: Run Cypress E2E tests

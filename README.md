@@ -1,6 +1,6 @@
 # ShopSmart - E-Commerce DevOps Project
 
-A full-stack e-commerce platform demonstrating modern DevOps practices, CI/CD automation, and infrastructure-as-code (IaC) deployment to AWS.
+A full-stack e-commerce platform demonstrating modern DevOps practices, CI/CD automation, and infrastructure-as-code (IaC) deployment to AWS. The application features a React-based storefront with a Node.js/Express backend serving product data with search and filtering capabilities.
 
 ## 📋 Table of Contents
 
@@ -386,24 +386,9 @@ aws logs tail /ecs/backend --follow
 aws logs tail /ecs/frontend --follow
 ```
 
-## 🤝 Contributing
-
-1. Create a feature branch (`git checkout -b feature/amazing-feature`)
-2. Commit your changes (`git commit -m 'Add amazing feature'`)
-3. Push to the branch (`git push origin feature/amazing-feature`)
-4. Open a Pull Request
-5. Wait for CI checks to pass
-6. Request review from team members
-
 ## 📝 License
 
 This project is licensed under the ISC License - see the package.json files for details.
-
-## 📧 Contact
-
-For questions or support, please open an issue on GitHub.
-
----
 
 **Last Updated**: April 28, 2026
 **Status**: Active Development
