@@ -261,39 +261,39 @@ resource "aws_security_group" "ecs_sg" {
 # Backend ECS service
 # Runs the backend task definition in the ECS cluster
 resource "aws_ecs_service" "backend_service" {
-  name                    = "backend-service"
-  cluster                 = aws_ecs_cluster.main.id
-  task_definition         = aws_ecs_task_definition.backend.arn
-  launch_type             = "FARGATE"
-  desired_count           = 1
-  force_new_deployment    = true
+  name                 = "backend-service"
+  cluster              = aws_ecs_cluster.main.id
+  task_definition      = aws_ecs_task_definition.backend.arn
+  launch_type          = "FARGATE"
+  desired_count        = 1
+  force_new_deployment = true
 
   network_configuration {
-    subnets              = [
+    subnets = [
       "subnet-0d62c3e9d8714ea7c",
       "subnet-0ecbebbd867ac4288"
     ]
-    security_groups      = [aws_security_group.ecs_sg.id]
-    assign_public_ip     = true
+    security_groups  = [aws_security_group.ecs_sg.id]
+    assign_public_ip = true
   }
 }
 
 # Frontend ECS service
 # Runs the frontend task definition in the ECS cluster
 resource "aws_ecs_service" "frontend_service" {
-  name                    = "frontend-service"
-  cluster                 = aws_ecs_cluster.main.id
-  task_definition         = aws_ecs_task_definition.frontend.arn
-  launch_type             = "FARGATE"
-  desired_count           = 1
-  force_new_deployment    = true
+  name                 = "frontend-service"
+  cluster              = aws_ecs_cluster.main.id
+  task_definition      = aws_ecs_task_definition.frontend.arn
+  launch_type          = "FARGATE"
+  desired_count        = 1
+  force_new_deployment = true
 
   network_configuration {
-    subnets              = [
+    subnets = [
       "subnet-0d62c3e9d8714ea7c",
       "subnet-0ecbebbd867ac4288"
     ]
-    security_groups      = [aws_security_group.ecs_sg.id]
-    assign_public_ip     = true
+    security_groups  = [aws_security_group.ecs_sg.id]
+    assign_public_ip = true
   }
 }
