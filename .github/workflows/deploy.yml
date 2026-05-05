@@ -41,50 +41,50 @@ jobs:
       # ── Step 4: Login to Amazon ECR ───────────────────────
       # COMMENTED: Fails due explicit deny on ecr:GetAuthorizationToken
       #
-      # - name: Login to Amazon ECR
-      #   id: login-ecr
-      #   uses: aws-actions/amazon-ecr-login@v2
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
 
 
-      # ── Step 6: Build, Tag & Push Docker Image ─────────────
-      # COMMENTED: Depends on ECR login, blocked in AWS Academy
-      #
-      # - name: Build and Push Backend Image
-      #   id: build-backend
-      #   env:
-      #     ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-      #     IMAGE_TAG:    ${{ github.sha }}
-      #   run: |
-      #     IMAGE_URI=$ECR_REGISTRY/devops-backend:$IMAGE_TAG
-      #     LATEST_URI=$ECR_REGISTRY/devops-backend:latest
-      #
-      #     echo "Building Docker image..."
-      #     docker build -t $IMAGE_URI -t $LATEST_URI ./backend
-      #
-      #     echo "Pushing image to ECR..."
-      #     docker push $IMAGE_URI
-      #     docker push $LATEST_URI
-      #
-      #     echo "✅ Docker image pushed: $IMAGE_URI"
+      ── Step 6: Build, Tag & Push Docker Image ─────────────
+      #COMMENTED: Depends on ECR login, blocked in AWS Academy
+      
+      - name: Build and Push Backend Image
+        id: build-backend
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG:    ${{ github.sha }}
+        run: |
+          IMAGE_URI=$ECR_REGISTRY/devops-backend:$IMAGE_TAG
+          LATEST_URI=$ECR_REGISTRY/devops-backend:latest
+      
+          echo "Building Docker image..."
+          docker build -t $IMAGE_URI -t $LATEST_URI ./backend
+      
+          echo "Pushing image to ECR..."
+          docker push $IMAGE_URI
+          docker push $LATEST_URI
+      
+          echo "✅ Docker image pushed: $IMAGE_URI"
 
 
-      # - name: Build and Push Frontend Image
-      #   id: build-frontend
-      #   env:
-      #     ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-      #     IMAGE_TAG:    ${{ github.sha }}
-      #   run: |
-      #     IMAGE_URI=$ECR_REGISTRY/devops-frontend:$IMAGE_TAG
-      #     LATEST_URI=$ECR_REGISTRY/devops-frontend:latest
-      #
-      #     echo "Building Docker image..."
-      #     docker build -t $IMAGE_URI -t $LATEST_URI ./frontend
-      #
-      #     echo "Pushing image to ECR..."
-      #     docker push $IMAGE_URI
-      #     docker push $LATEST_URI
-      #
-      #     echo "✅ Docker image pushed: $IMAGE_URI"
+      - name: Build and Push Frontend Image
+        id: build-frontend
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG:    ${{ github.sha }}
+        run: |
+          IMAGE_URI=$ECR_REGISTRY/devops-frontend:$IMAGE_TAG
+          LATEST_URI=$ECR_REGISTRY/devops-frontend:latest
+      
+          echo "Building Docker image..."
+          docker build -t $IMAGE_URI -t $LATEST_URI ./frontend
+      
+          echo "Pushing image to ECR..."
+          docker push $IMAGE_URI
+          docker push $LATEST_URI
+      
+          echo "✅ Docker image pushed: $IMAGE_URI"
 
 
       # ── Step 7: Setup Terraform ───────────────────────────
