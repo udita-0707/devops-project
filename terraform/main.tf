@@ -11,6 +11,15 @@ terraform {
       version = "~> 5.0"
     }
   }
+
+  # # Remote backend configuration for S3
+  backend "s3" {
+    bucket         = "shopsmart-terraform-state-339712978141"
+    key            = "terraform/state"
+    region         = "us-east-1"
+    dynamodb_table = "shopsmart-terraform-locks"
+    encrypt        = true
+  }
 }
 
 # AWS provider configuration
@@ -22,12 +31,74 @@ provider "aws" {
 data "aws_caller_identity" "current" {}
 
 # ============================================================================
+# Terraform State Management
+# ============================================================================
+
+# S3 bucket for storing Terraform state
+resource "aws_s3_bucket" "terraform_state" {
+  bucket = "shopsmart-terraform-state-${data.aws_caller_identity.current.account_id}"
+
+  # Prevent accidental deletion of this bucket
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
+# Enable versioning for state bucket
+resource "aws_s3_bucket_versioning" "terraform_state_versioning" {
+  bucket = aws_s3_bucket.terraform_state.id
+
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+# Enable server-side encryption for state bucket
+resource "aws_s3_bucket_server_side_encryption_configuration" "terraform_state_encryption" {
+  bucket = aws_s3_bucket.terraform_state.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+    bucket_key_enabled = true
+  }
+}
+
+# Block public access to state bucket for security
+resource "aws_s3_bucket_public_access_block" "terraform_state_public_access" {
+  bucket = aws_s3_bucket.terraform_state.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+# DynamoDB table for Terraform state locking
+resource "aws_dynamodb_table" "terraform_locks" {
+  name         = "shopsmart-terraform-locks"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "LockID"
+
+  attribute {
+    name = "LockID"
+    type = "S"
+  }
+
+  # Prevent accidental deletion of this table
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
+# ============================================================================
 # S3 Storage Resources
 # ============================================================================
 
 # S3 bucket for storing user uploads
 resource "aws_s3_bucket" "uploads_bucket" {
-  bucket = "shopsmart-uploads-46dc1b2e"
+  bucket = "shopsmart-uploads-udita"
 }
 
 # S3 bucket for storing application logs
