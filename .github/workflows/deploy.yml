@@ -46,7 +46,7 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v2
 
 
-      ── Step 6: Build, Tag & Push Docker Image ─────────────
+      #── Step 6: Build, Tag & Push Docker Image ─────────────
       #COMMENTED: Depends on ECR login, blocked in AWS Academy
       
       - name: Build and Push Backend Image
